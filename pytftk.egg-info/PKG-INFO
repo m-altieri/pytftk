@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: pytftk
+Version: 1.0
+Summary: A Python toolkit to develop deep learning models with with TensorFlow.
+Home-page: https://github.com/m-altieri/pytftk
+Author: Massimiliano Altieri
+Author-email: massimiliano.altieri@uniba.it

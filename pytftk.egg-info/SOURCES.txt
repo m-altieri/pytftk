@@ -1,0 +1,16 @@
+setup.py
+pytftk/__init__.py
+pytftk/arrays.py
+pytftk/autocorrelation.py
+pytftk/dicts.py
+pytftk/distribute.py
+pytftk/formatting.py
+pytftk/logging.py
+pytftk/math.py
+pytftk/nn.py
+pytftk/runs_management.py
+pytftk/sequence.py
+pytftk.egg-info/PKG-INFO
+pytftk.egg-info/SOURCES.txt
+pytftk.egg-info/dependency_links.txt
+pytftk.egg-info/top_level.txt

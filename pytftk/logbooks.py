@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorboard as tb
 import matplotlib.pyplot as plt
 
-import utils.nn
+import pytftk.nn
 
 
 class TBManager:
@@ -139,7 +139,7 @@ class TBManager:
             # if minmax, apply minmax normalization to the image
             data = tf.cond(
                 tf.constant(minmax),
-                lambda: utils.nn.minmax(data),
+                lambda: pytftk.nn.minmax(data),
                 lambda: data,
             )
 
