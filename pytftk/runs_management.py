@@ -3,56 +3,131 @@ import yaml
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from colorama import Fore, Style
+from colorama import Fore
 
 
 class RunManager:
     """Utility class to manage saved runs.
     The project directory is expected to be organized as follows:
-    project_root/
+    <project_root>/
     ├── src/
     └── runs/
         ├── default.yaml
         ├── DNS-GT/
         |   ├── default.yaml
-        │   ├── <run_name_1>/
-        │   │   ├── weights.h5
-        │   │   ├── embeddings.npy
-        │   │   ├── conf.yaml
-        |   |   └── predictions.csv
-        │   └── <run_name_2>/
-        │       ├── weights.h5
-        │       ├── embeddings.npy
-        │       ├── conf.yaml
-        |       └── predictions.csv
+        |   ├── pretrained/
+        |   |   ├── <run_name_1>/
+        │   |   |   ├── weights.h5
+        │   |   |   ├── embeddings.npy
+        │   |   |   ├── conf.yaml
+        │   |   |   ├── predictions.csv
+        |   |   └── <run_name_2>/
+        │   |       ├── weights.h5
+        │   |       ├── embeddings.npy
+        │   |       ├── conf.yaml
+        │   |       └── predictions.csv
+        |   ├── <downstream_task_1>/
+        |   |   ├── <run_name_11>/
+        │   |   |   ├── weights.h5
+        │   |   |   ├── embeddings.npy
+        │   |   |   ├── conf.yaml
+        │   |   |   ├── predictions.csv
+        |   |   └── <run_name_12>/
+        │   |       ├── weights.h5
+        │   |       ├── embeddings.npy
+        │   |       ├── conf.yaml
+        │   |       └── predictions.csv
+        |   └── <downstream_task_2>/
+        |       ├── <run_name_21>/
+        │       |   ├── weights.h5
+        │       |   ├── embeddings.npy
+        │       |   ├── conf.yaml
+        │       |   ├── predictions.csv
+        |       └── <run_name_22>/
+        │           ├── weights.h5
+        │           ├── embeddings.npy
+        │           ├── conf.yaml
+        │           └── predictions.csv
         ├── W2V-CBOW/
         |   ├── default.yaml
-        │   ├── <run_name_1>/
-        │   │   ├── weights.h5
-        │   │   ├── embeddings.npy
-        │   │   ├── conf.yaml
-        │   └── <run_name_2>/
-        │       ├── weights.h5
-        │       ├── embeddings.npy
-        │       ├── conf.yaml
-        |       └── predictions.csv
+        |   ├── pretrained/
+        |   |   ├── <run_name_1>/
+        │   |   |   ├── weights.h5
+        │   |   |   ├── embeddings.npy
+        │   |   |   ├── conf.yaml
+        │   |   |   ├── predictions.csv
+        |   |   └── <run_name_2>/
+        │   |       ├── weights.h5
+        │   |       ├── embeddings.npy
+        │   |       ├── conf.yaml
+        │   |       └── predictions.csv
+        |   ├── <downstream_task_1>/
+        |   |   ├── <run_name_11>/
+        │   |   |   ├── weights.h5
+        │   |   |   ├── embeddings.npy
+        │   |   |   ├── conf.yaml
+        │   |   |   ├── predictions.csv
+        |   |   └── <run_name_12>/
+        │   |       ├── weights.h5
+        │   |       ├── embeddings.npy
+        │   |       ├── conf.yaml
+        │   |       └── predictions.csv
+        |   └── <downstream_task_2>/
+        |       ├── <run_name_21>/
+        │       |   ├── weights.h5
+        │       |   ├── embeddings.npy
+        │       |   ├── conf.yaml
+        │       |   ├── predictions.csv
+        |       └── <run_name_22>/
+        │           ├── weights.h5
+        │           ├── embeddings.npy
+        │           ├── conf.yaml
+        │           └── predictions.csv
         └── W2V-SkipGram/
             ├── default.yaml
-            └── <run_name>/
-                ├── weights.h5
-                ├── embeddings.npy
-                ├── conf.yaml
-                └── predictions.csv
+            ├── pretrained/
+            |   ├── <run_name_1>/
+            |   |   ├── weights.h5
+            |   |   ├── embeddings.npy
+            |   |   ├── conf.yaml
+            |   |   ├── predictions.csv
+            |   └── <run_name_2>/
+            |       ├── weights.h5
+            |       ├── embeddings.npy
+            |       ├── conf.yaml
+            |       └── predictions.csv
+            ├── <downstream_task_1>/
+            |   ├── <run_name_11>/
+            |   |   ├── weights.h5
+            |   |   ├── embeddings.npy
+            |   |   ├── conf.yaml
+            |   |   ├── predictions.csv
+            |   └── <run_name_12>/
+            |       ├── weights.h5
+            |       ├── embeddings.npy
+            |       ├── conf.yaml
+            |       └── predictions.csv
+            └── <downstream_task_2>/
+                ├── <run_name_21>/
+                |   ├── weights.h5
+                |   ├── embeddings.npy
+                |   ├── conf.yaml
+                |   ├── predictions.csv
+                └── <run_name_22>/
+                    ├── weights.h5
+                    ├── embeddings.npy
+                    ├── conf.yaml
+                    └── predictions.csv
     """
 
     # Static constants
-    _PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..", "..")  # ".."
     _WEIGHTS_FILE_NAME = "weights.h5"
     _WEIGHTS_FINETUNING_FILE_NAME = "weights.finetuning.h5"
     _EMBEDDINGS_FILE_NAME = "embeddings.npy"
     _CONF_FILE_NAME = "conf.yaml"
     _PREDICTIONS_FOLDER_NAME = "predictions"
     _DEFAULT_CONF_FILE_NAME = "default.yaml"
+    _PRETRAINED_FOLDER_NAME = "pretrained"
 
     # These fields will not be saved
     _CONF_WHITELIST = {
@@ -68,16 +143,20 @@ class RunManager:
 
     def __init__(
         self,
+        runs_path: str,
         model_object: tf.keras.Model,
         model_name: str,
+        task_name: str = None,
         run_name: str = None,
         start_from: str = None,
         last: bool = False,  # deprecated
         verbose: bool = False,
     ):
         # Initialize parameters
+        self.runs_path = runs_path
         self.model_object = model_object
         self.model_name = model_name
+        self.task_name = task_name or self._PRETRAINED_FOLDER_NAME
         self.run_name = run_name
         self.start_from = start_from
         self.last = last
@@ -85,10 +164,20 @@ class RunManager:
 
         # Create path if it doesn't exist
         if not os.path.exists(
-            os.path.join(self._PROJECT_ROOT, "runs", self.model_name, self.run_name)
+            os.path.join(
+                self.runs_path,
+                self.model_name,
+                self.task_name,
+                self.run_name,
+            )
         ):
             os.makedirs(
-                os.path.join(self._PROJECT_ROOT, "runs", self.model_name, self.run_name)
+                os.path.join(
+                    self.runs_path,
+                    self.model_name,
+                    self.task_name,
+                    self.run_name,
+                )
             )
 
         # Store correct paths for weights, embeddings and conf
@@ -98,7 +187,7 @@ class RunManager:
             self.embeddings_path,
             self.conf_path,
             self.predictions_path,
-        ) = self._get_paths(model_name, run_name)
+        ) = self._get_paths(model_name, self.task_name, run_name)
 
     def exist_weights(self):
         """Returns True if weights exist for this run.
@@ -211,7 +300,7 @@ class RunManager:
         weights_path = None
         if not self.exist_weights():
             _, start_from_weights_path, _, _, _ = self._get_paths(
-                self.model_name, self.start_from
+                self.model_name, self.task_name, self.start_from
             )
             weights_path = start_from_weights_path
         else:
@@ -254,7 +343,7 @@ class RunManager:
 
         # Load default root conf as a base
         default_root_conf_path = os.path.join(
-            self._PROJECT_ROOT, "runs", self._DEFAULT_CONF_FILE_NAME
+            self.runs_path, self._DEFAULT_CONF_FILE_NAME
         )
         try:
             with open(
@@ -270,8 +359,7 @@ class RunManager:
 
         # Load default model conf and override the root one
         default_model_conf_path = os.path.join(
-            self._PROJECT_ROOT,
-            "runs",
+            self.runs_path,
             self.model_name,
             self._DEFAULT_CONF_FILE_NAME,
         )
@@ -291,7 +379,7 @@ class RunManager:
         conf_path = None
         if not os.path.exists(self.conf_path):
             _, _, _, start_from_conf_path, _ = self._get_paths(
-                self.model_name, self.start_from
+                self.model_name, self.task_name, self.start_from
             )
             conf_path = start_from_conf_path
         else:
@@ -337,12 +425,15 @@ class RunManager:
     def _get_paths(
         self,
         model_name: str = None,
+        task_name: str = None,
         run_name: str = None,
         finetuning: bool = False,
     ):
         # check for ValueErrors
         if self.model_name is None and model_name is None:
             raise ValueError(f"{Fore.RED}model_name must be specified.{Fore.RESET}")
+        if self.task_name is None and task_name is None:
+            raise ValueError(f"{Fore.RED}task_name must be specified.{Fore.RESET}")
         if self.run_name is None and run_name is None and not self.last:
             raise ValueError(
                 f"{Fore.RED}run_name must be specified if load is False."
@@ -353,21 +444,34 @@ class RunManager:
         if model_name is None:
             model_name = self.model_name
 
-        # if model_name is None, use the one provided in the constructor
+        # if task_name is None, use the one provided in the constructor
+        if task_name is None:
+            task_name = self.task_name
+
+        # if run_name is None, use the one provided in the constructor
         if run_name is None:
             run_name = self.run_name
 
         # set weights, embeddings, conf and predictions paths
-        run_path = os.path.join(self._PROJECT_ROOT, "runs", model_name, run_name)
+        run_path = os.path.join(
+            self.runs_path,
+            model_name,
+            task_name,
+            run_name,
+        )
         weights_path = os.path.join(
             run_path,
-            self._WEIGHTS_FILE_NAME
-            if not finetuning
-            else self._WEIGHTS_FINETUNING_FILE_NAME,
+            (
+                self._WEIGHTS_FILE_NAME
+                if not finetuning
+                else self._WEIGHTS_FINETUNING_FILE_NAME
+            ),
         )
         embeddings_path = os.path.join(run_path, self._EMBEDDINGS_FILE_NAME)
         conf_path = os.path.join(run_path, self._CONF_FILE_NAME)
-        predictions_path = os.path.join(run_path, self._PREDICTIONS_FOLDER_NAME)
+        predictions_path = os.path.join(
+            run_path, self._PREDICTIONS_FOLDER_NAME, run_name
+        )
 
         return (
             run_path,
@@ -377,13 +481,12 @@ class RunManager:
             predictions_path,
         )
 
-    @staticmethod
-    def load_root_conf():
+    def load_root_conf(self):
         conf = {}
 
         # Load default root conf as a base
         default_root_conf_path = os.path.join(
-            __class__._PROJECT_ROOT, "runs", __class__._DEFAULT_CONF_FILE_NAME
+            self.runs_path, "..", __class__._DEFAULT_CONF_FILE_NAME
         )
         try:
             with open(
