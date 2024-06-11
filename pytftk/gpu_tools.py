@@ -36,8 +36,8 @@ def get_freeest_gpu():
 
 def use_devices(device_index):
     """Set GPU devices to use and enable memory growth on them.
-    Note: calling use_devices() will prevent other functions from seeing all 
-    physical GPUs, not allowing them to find e.g. the true most free one. 
+    Note: calling use_devices() will prevent other functions from seeing all
+    physical GPUs, not allowing them to find e.g. the true most free one.
     Call use_devices() after you are sure you have selected the GPU(s) to use
     (e.g. after finding the most free one).
 
@@ -100,7 +100,7 @@ def get_avail_memory(device_index):
 
 
 def await_avail_memories(device_idxs, min_bytes, interval=60):
-    """Pause the execution synchronously until all GPUs in device_idxs have 
+    """Pause the execution synchronously until all GPUs in device_idxs have
     enough free memory.
 
     Args:
@@ -113,7 +113,7 @@ def await_avail_memories(device_idxs, min_bytes, interval=60):
     Raises:
         ValueError: if device_idxs is not a list.
         ValueError: if device_idxs contains a -1.
-    """    
+    """
     if not isinstance(device_idxs, list):
         raise ValueError(
             f"device_idxs ({device_idxs}) must be list, found {type(device_idxs)} instead."
@@ -122,7 +122,7 @@ def await_avail_memories(device_idxs, min_bytes, interval=60):
         raise ValueError(
             f"device_idxs ({device_idxs}) cannot contain -1, found {device_idxs} instead."
         )
-    
+
     available = True
     while True:
         for d in device_idxs:
@@ -131,7 +131,8 @@ def await_avail_memories(device_idxs, min_bytes, interval=60):
         if available:
             break
 
-def await_avail_memory(device_idx, min_bytes, interval=60): 
+
+def await_avail_memory(device_idx, min_bytes, interval=60):
     """Pause the execution synchronously until enough GPU memory appears to be
     free for the provided GPU index.
 
@@ -155,9 +156,22 @@ def await_avail_memory(device_idx, min_bytes, interval=60):
 
     # if device_index is an int, make it a list
     if not isinstance(device_idx, int):
-        raise ValueError(
-            f"device_idx ({device_idx}) must be int, found {type(device_idx)} instead."
-        )
+        try:
+            if isinstance(device_idx, list) and len(device_idx) == 1:
+                device_idx = device_idx[0]
+                print(
+                    f"{Fore.YELLOW}[WARN] device_idx must be int, found a "
+                    + f"list with length 1 instead: {device_idx}.{Fore.RESET}"
+                )
+            else:
+                raise ValueError(
+                    f"device_idx ({device_idx}) must be a int, "
+                    + f"found {type(device_idx)} instead."
+                )
+        except:
+            raise ValueError(
+                f"device_idx ({device_idx}) must be int, found {type(device_idx)} instead."
+            )
     device_idx = [device_idx]
 
     # if device_index is -1, use all gpus
@@ -169,12 +183,12 @@ def await_avail_memory(device_idx, min_bytes, interval=60):
     while all([m < min_bytes for m in avail]):
         print(
             f"{Style.BRIGHT}{Fore.YELLOW}[WARN] Device(s) {device_idx} have "
-            + f"{[f"{a / GiB :2f}" for a in avail]} GiB left, but at least "
+            + f"{[f'{a / GiB :2f}' for a in avail]} GiB left, but at least "
             + f"{min_bytes / GiB:.2f} are needed to start. Waiting "
             + f"{interval} seconds to see if they free up...{Style.RESET_ALL}",
         )
         time.sleep(interval)
         instantly_available = False
         avail = [get_avail_memory(d) for d in device_idx]
-    
+
     return device_idx[avail.index(max(avail))], instantly_available
