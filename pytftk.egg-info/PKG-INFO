@@ -5,7 +5,3 @@ Summary: A Python toolkit to develop deep learning models with TensorFlow.
 Home-page: https://github.com/m-altieri/pytftk
 Author: Massimiliano Altieri
 Author-email: massimiliano.altieri@uniba.it
-Requires-Dist: numpy
-Requires-Dist: pandas
-Requires-Dist: pynvml
-Requires-Dist: colorama

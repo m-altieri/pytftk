@@ -1,3 +1,4 @@
+.gitignore
 setup.py
 pytftk/__init__.py
 pytftk/arrays.py

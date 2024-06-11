@@ -3,7 +3,7 @@ import yaml
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from colorama import Fore
+from colorama import Fore, Style
 
 
 class RunManager:
@@ -302,6 +302,22 @@ class RunManager:
             _, start_from_weights_path, _, _, _ = self._get_paths(
                 self.model_name, self.task_name, self.start_from
             )
+            # if there are no weights in the --start-from run, i have to check
+            # in the pretraining task
+            if (
+                not os.path.exists(start_from_weights_path)
+                and self.task_name != self._PRETRAINED_FOLDER_NAME
+            ):
+                _, start_from_weights_path, _, _, _ = self._get_paths(
+                    self.model_name, self._PRETRAINED_FOLDER_NAME, self.start_from
+                )
+                print(
+                    f"{Fore.YELLOW}[WARN] Current task is not {self._PRETRAINED_FOLDER_NAME} "
+                    + f"and weights could not be found. Attempting to load "
+                    + f"them from {Style.BRIGHT}{start_from_weights_path} "
+                    + f"{Style.NORMAL} instead, in case this is a first "
+                    + f"finetuning round.{Fore.RESET}"
+                )
             weights_path = start_from_weights_path
         else:
             weights_path = self.weights_path
