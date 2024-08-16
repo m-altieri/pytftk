@@ -1,9 +1,11 @@
 import os
 import datetime
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 import tensorboard as tb
 import matplotlib.pyplot as plt
+from colorama import Fore, Style
 
 import pytftk.nn
 
@@ -214,12 +216,14 @@ class TBManager:
 
 
 class Logbook:
+    """Keeps a dict of lists of lists:
+    {'m1': [[...], [...], ..., [...]], ..., 'mn': [[...], [...], ..., [...]]}
+    """
+
     def __init__(self):
         super().__init__()
-        # self.metrics is a dict of lists of lists:
-        # {'m1': [[...], [...], ..., [...]], ..., 'mn': [[...], [...], ..., [...]]}
         self.metrics = {}
-        self.figure = plt.figure()
+        # self.figure = plt.figure()
 
     def register(self, name, value):
         if name not in self.metrics:
@@ -228,31 +232,144 @@ class Logbook:
         self.metrics[name][-1].append(value)
 
     def get(self, name, overall=False):
-        return self.metrics[name] if overall else self.metrics[name][-1]
+        if name not in self.metrics:
+            print(
+                f"{Fore.YELLOW}[WARN] Can't get metric {Style.BRIGHT}{name}"
+                + f"{Style.NORMAL}: not in logbook. Logbook contains: "
+                + f"{Style.BRIGHT}{[k for k in self.metrics]}{Style.RESET_ALL}"
+            )
+        else:
+            return self.metrics[name] if overall else self.metrics[name][-1]
 
     def count(self, name, overall=False):
-        return np.size(self.metrics[name]) if overall else len(self.metrics[name][-1])
+        if name not in self.metrics:
+            print(
+                f"{Fore.YELLOW}[WARN] Can't count metric {Style.BRIGHT}{name}"
+                + f"{Style.NORMAL}: not in logbook. Logbook contains: "
+                + f"{Style.BRIGHT}{[k for k in self.metrics]}{Style.RESET_ALL}"
+            )
+        else:
+            return (
+                np.size(self.metrics[name]) if overall else len(self.metrics[name][-1])
+            )
 
     def new(self):
         for name in self.metrics:
             self.metrics[name].append([])
 
-    def save_plot(self, path, names=None):
-        for metric in self.metrics:
-            if names and metric not in names:
-                continue
-            plt.figure(metric)
-            plt.plot(
+    def save_plot(
+        self,
+        path,
+        names=None,  # names of the metrics to plot. if None, plot them all. None, string or list
+        title=None,
+        color="black",  # str or dict. if dict, the color of each metric
+        linewidth=1,
+        alpha=1.0,
+        pad_left=0.2,
+        pad_bottom=0.2,
+        xlabel="Steps",
+        ylabel="Value",
+        xticks_every=None,
+        multiplot=False,  # plot all selected metrics in the same plot
+    ):
+        # convert `names` into a list
+        if names is None:
+            names = [k for k in self.metrics]
+        if type(names) is str:
+            names = [names]
+
+        # print warning if one or more metrics is not present in the logbook
+        not_present = [m for m in names if m not in self.metrics]
+        if len(not_present) > 0:
+            print(
+                f"{Fore.YELLOW}[WARN] Can't plot these metrics: {Style.BRIGHT}"
+                + f"{', '.join(not_present)}{Style.NORMAL}, as they are not "
+                + f"in logbook. Logbook contains: {Style.BRIGHT}"
+                + f"{[k for k in self.metrics]}.{Style.RESET_ALL}"
+            )
+
+        # print warning if one or more metrics has no registered values
+        empty = [m for m in names if self.count(m) == 0]
+        if len(empty) > 0:
+            print(
+                f"{Fore.YELLOW}[WARN] Metrics {Style.BRIGHT}{', '.join(empty)}"
+                + f"{Style.NORMAL} have no registered values and will not be "
+                + f"saved.{Style.RESET_ALL}"
+            )
+
+        # redefine names to only contain present metrics
+        names = [m for m in names if m not in not_present and m not in empty]
+        if len(names) == 0:
+            print(
+                f"{Fore.YELLOW}[WARN] All provided metrics are either not "
+                + f"present in the logbook or are empty. "
+                + f"{self.save_plot.__name__} will return now.{Style.RESET_ALL}"
+            )
+            return
+
+        for metric in names:
+            if not multiplot:  # initialize a new plot for each metric
+                plt.clf()
+                plt.figure(metric)
+            plt.plot(  # plot the current metric
                 np.arange(self.count(metric)),
                 np.array(self.get(metric)),
-                linewidth=0.1,
-                color="black",
-                alpha=0.25,
+                linewidth=(
+                    linewidth if type(linewidth) is not dict else linewidth[metric]
+                ),
+                color=color if type(color) is not dict else color[metric],
+                alpha=alpha if type(alpha) is not dict else alpha[metric],
+                label=metric,
             )
-            plt.xticks(np.arange(0, self.count(metric), 3), fontsize=24)
+            if not multiplot:  # configure the plot for the current metric
+                plt.title(
+                    title or "" if type(title) is not dict else title[metric],
+                    fontdict={"fontsize": 24},
+                )
+                plt.xticks(
+                    np.arange(
+                        0,
+                        self.count(metric),
+                        xticks_every or max(self.count(metric) // 10, 1),
+                    ),
+                    fontsize=24,
+                    rotation=60,
+                )
+                plt.yticks(fontsize=24)
+                plt.xlabel(xlabel, fontsize=24)
+                plt.ylabel(metric, fontsize=24)
+                plt.ylim(bottom=0)
+                plt.grid(True, axis="y")
+                plt.gcf().subplots_adjust(left=pad_left, bottom=pad_bottom)
+                plt.savefig(os.path.join(path, metric + ".png"))
+                plt.savefig(os.path.join(path, metric + ".pdf"))
+        if multiplot:  # configure the plot globally for all metrics
+            plt.title(title or "", fontdict={"fontsize": 24})
+            plt.xticks(
+                np.arange(
+                    0,
+                    self.count(names[0]),
+                    xticks_every or max(self.count(metric) // 10, 1),
+                ),
+                fontsize=24,
+                rotation=60,
+            )
             plt.yticks(fontsize=24)
-            plt.xlabel("Timesteps", fontsize=24)
-            plt.ylabel("Spatial Autocorrelation", fontsize=24)
-            plt.gcf().subplots_adjust(left=0.20, bottom=0.20)
-            plt.savefig(os.path.join(path, metric + ".png"))
-            plt.savefig(os.path.join(path, metric + ".pdf"))
+            plt.xlabel(xlabel, fontsize=24)
+            plt.ylabel(ylabel, fontsize=24)
+            plt.ylim(bottom=0)
+            plt.grid(True, axis="y")
+            plt.legend()
+            plt.gcf().subplots_adjust(left=pad_left, bottom=pad_bottom)
+            plt.savefig(os.path.join(path, "_".join(names) + ".png"))
+            plt.savefig(os.path.join(path, "_".join(names) + ".pdf"))
+
+        for metric in names:
+            values = np.array(self.get(metric))
+            df = pd.DataFrame(values)
+            save_path = os.path.join(path, metric + ".csv")
+            df.to_csv(save_path)
+            print(
+                f"{Fore.CYAN}[INFO] Saved {Style.BRIGHT}{metric}{Style.NORMAL} "
+                + f"to {Style.BRIGHT}{save_path}{Style.NORMAL}.{Fore.RESET}"
+            )
